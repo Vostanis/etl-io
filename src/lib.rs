@@ -166,28 +166,30 @@ where
     fn transform(input: I) -> impl Future<Output = Result<O, Error>> + Send;
 
     /// ## Load
-    /// Load to a database. Current database APIs are:
+    /// Load to a database. 
+    /// Default implememtation has a list current database APIs:
     /// - CouchDB
     /// - ScyllaDB
     /// - PostgreSQL
-    fn load(output: O, db: Database) -> impl Future<Output = ()> + Send { async move {
+    /// 
+    /// The assumption is to take a file/table name and create/update it
+    fn load(output: O, db: &str) -> impl Future<Output = ()> + Send { async move {
 
-        match db {
+        let binding = db.to_lowercase();
+        let database = binding.as_str();
+        match database {
 
             // ---> CouchDB
-            Database::CouchDB(conn, doc_id) => {
-                todo!()
-            }
+            "couchdb" | "couch" => {}            
 
             // ---> ScyllaDB
-            Database::ScyllaDB(conn, doc_id) => {
-                todo!()
-            }
+            "scylladb" | "scylla" => {}
 
             // ---> PostgreSQL
-            Database::PostgreSQL(conn, tbl_name) => {
-                todo!()
-            }
+            "postgresql" | "postgres" | "pgsql" => {}
+
+            // else
+            _ => panic!("[error] this database type is either: incorrectly typed, or unsupported")
         }
     }}
 
@@ -213,6 +215,11 @@ pub enum Database<'a> {
     CouchDB(&'a str, &'a str),
     ScyllaDB(&'a str, &'a str),
     PostgreSQL(&'a str, &'a str)
+}
+
+/// Connection query
+pub struct Connection {
+
 }
 
 /// Custom Error type for ETL, wrapping all Error types.
