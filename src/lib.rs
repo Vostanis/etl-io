@@ -1,77 +1,65 @@
 //! # Extract, Transform, Load
-//! 
+//!
 //! `ETL` is a trait for a serde-Deserialized ***JSON input***, paired with a serde-Serialized ***output***; `ETL<I, O>`.
 //! 
+//! *The aim of this crate is to standardize the typical ETL pipeline for JSON.*
+//!
 //! The 3 core functions (below) are intended to be customized (although, `extract()` and `load()` do have default implementations).
-//! 
-//! *The aim of this crate is to standardize the typical ETL pipeline.*
-//! 
-//! The 3 core methods are: 
-//!     - `extract(endpoint)` 
-//!     - `transform(dataset)`
-//!     - `load(transformed_dataset)`
+//!
+//! The 3 core methods are:
+//! - `extract(endpoint)`
+//! - `transform(dataset)`
+//! - `load(transformed_dataset)`
 //!
 //! By default, `transform()` will always need defining, but `extract()` and `load()` do come with useful default implementations.
-//! 
+//!
 //! ## Aggregrations
-//! Subsequent aggregate methods are then derived, for example: 
-//!     - `extran(endpoint)` - a combination of `extract()` and `transform()`.
-//!     - `etl(endpoint)` - all three processes combined.
-//! 
-//! ## Example: Definition
-//! 
+//! Subsequent aggregate methods are then derived, for example:
+//! - `extran(endpoint)` - a combination of `extract()` and `transform()`.
+//! - `etl(endpoint)` - all three processes combined.
+//!
+//! ## Example 1: Generic
+//!
 //! ```
 //! #[serde(Deserialize)]
-//! struct Input {};
-//! 
+//! struct Input {
+//!     ...
+//! };
+//!
 //! #[serde(Serialize)]
-//! struct Output {};
-//! 
+//! struct Output {
+//!     ...
+//! };
+//!
 //! impl ETL<Input, Output> for Input {
+//! 
+//!     // using extract() default impl
+//! 
 //!     pub fn transform(data: Input) -> Result<Output, etl::Error> {
 //!         ...
 //!     }
-//! }
-//! ```
 //! 
-//! Default implementations defined where possible, but `transform()` definition is required.
-//! 
-//! ## Example: Usage
-//! ```
+//!     // using load() default impl
+//! } 
+//!
 //! #[tokio::main]
 //! async fn main() {
 //!     Input::etl().await;
 //! }
 //! ```
+//!
+//! Default implementations defined where possible, but a `transform()` definition is always required by the user.
 //! 
-//! ### Important footnote on Source Code
-//! `async fn` traits are not recommended by the compiler, so when reviewing the source code you may note the follwoing format of function definitions:
-//! 
-//! ```
-//! fn some_function() -> impl Future<Output = Result<T, Error>> + Send { async { ... } }
-//! ```
-//! 
-//! This is contrast to the more typical `async fn` definition:
-//! 
-//! ```
-//! async fn some_function() -> Result<T, Error> { ... }
-//! ```
-//! 
-//! The compiler simply recommends *against* the latter option, suggesting the prior instead.
-//! 
-//! When declaring your own implementations, simply define in the typical `async fn ...` format.
-//! 
-//! ## Example
+//! ## Example 2: Specific
 //! ```
 //! // Input Type; the struct/enum that deserializes the source material
 //! #[derive(Deserialize, Debug)]
 //! struct RawPrice {
 //!     chart: Chart
 //! }
-//! 
-//! // `Chart` definition omitted for simplicity ... 
-//! 
-//! // Output Type; the struct/enum that serializes to the final output 
+//! // The rest of the `Chart` definition has been omitted for simplicity ...
+//!
+//! // Output Type; the struct/enum that serializes to the final output
 //! #[derive(Serialize, Deserialize, Debug)]
 //! struct Price {
 //!     date: String,
@@ -82,7 +70,7 @@
 //!     adj_close: f64,
 //!     volume: u64,
 //! }
-//! 
+//!
 //! // The following is the impl, which could be written one of two ways (in generic terms):
 //! //      impl ETL<I, O> for I { ... }
 //! //      impl ETL<I, O> for O { ... }
@@ -90,10 +78,10 @@
 //! {
 //!     // reading JSON from static str
 //!     async fn extract(init: &str) -> Result<RawPrice, etl::Error> {
-//!         let data: RawPrice = serde_json::from_str(&init).expect("could not deserialize data to RawPrice type");
+//!         let data: RawPrice = serde_json::from_str(&init)?;
 //!         Ok(data)
 //!     }
-//! 
+//!
 //!     // method that unpacks Input into Output (the following steps are situational)
 //!     async fn transform(data: RawPrice) -> Result<Vec<Price>, etl::Error> {
 //!         let base = &data.chart.result[0];
@@ -122,120 +110,184 @@
 //!     }
 //! }
 //! ```
+//!
+//! ### Important footnote on Source Code
+//! `async traits` are not recommended by the compiler, so when reviewing the source code you may note the following format of function definitions:
+//!
+//! ```
+//! fn some_function() -> impl Future<Output = Result<T, Error>> { async { ... } }
+//! ```
+//!
+//! This is in contrast to the typical `async fn` definition:
+//! 
+//! ```
+//! async fn some_function() -> Result<T, Error> { ... }
+//! ```
+//!
+//! The compiler simply recommends *against* the latter option, suggesting the prior instead, when building `async traits`.
+//!
+//! When declaring your own implementations, define them in the typical `async fn ...` format.
+
+pub mod db;
+use crate::db::couchdb;
 
 use std::future::Future;
+use std::marker::PhantomData;
+
+pub struct Node<I, O>
+where
+    I: serde::de::DeserializeOwned + Send,
+    O: for<'a> serde::de::Deserialize<'a> + serde::Serialize + Send
+{
+    /// We don't want to store an object of type I or of type O (or both). 
+    /// 
+    /// However, if we don't have *some object* (something to refer to as *self*), then we cannot safely
+    /// apply any derived methods (see [Object Safety](https://doc.rust-lang.org/reference/items/traits.html#object-safety)).
+    /// 
+    /// So, to keep the compiler happy, we can use PhantomData<T>.
+    _phantom: PhantomData<(I, O)>
+}
+
+impl<I, O> Node<I, O> 
+where
+    I: serde::de::DeserializeOwned + Send,
+    O: for<'a> serde::de::Deserialize<'a> + serde::Serialize + Send
+{
+    /// Creates an ETL node
+    pub async fn create_node() -> Node<I, O> {
+        Node { 
+            _phantom: PhantomData
+        }
+    }
+}
+
+impl<I, O> ETL<I, O> for Node<I, O> 
+where
+    I: serde::de::DeserializeOwned + Send,
+    O: for<'a> serde::de::Deserialize<'a> + serde::Serialize + Send 
+{
+    async fn transform(&self, _input: I) -> Result<O, Error> {
+        unimplemented!()
+    }
+}
 
 pub trait ETL<I, O>
 where
-    I: serde::de::DeserializeOwned + Send, // input needs to Deserialized but required to take ownership
-    O: serde::Serialize + Send             // all output can must be Serialized
+    I: serde::de::DeserializeOwned + Send,
+    O: for<'a> serde::de::Deserialize<'a> + serde::Serialize + Send,
 {
-    /// # Extract, Transform, Load
-    /// ## Extract
-    /// fetch data from some endpoint (A.K.A. path); 
-    /// default implementation assumes &str input type resembling either a File Path or a URL
-    fn extract(path: &str) -> impl Future<Output = Result<I, Error>> + Send { async move {
-        if path.starts_with("http") {
-            Self::extract_url(path).await
-        } else {
-            Self::extract_file(path).await
+    /// Fetch data from some endpoint (A.K.A. path);
+    /// default implementation assumes `&str` input type, resembling either a File Path or a URL.
+    fn extract(&self, path: &str) -> impl Future<Output = Result<I, Error>> {
+        async move {
+            if path.starts_with("http") {
+                self.extract_url(path).await
+            } else {
+                self.extract_file(path).await
+            }
         }
-    }}
-    
-    /// Read a JSON file and deserialize to some I type
-    fn extract_file(file_path: &str) -> impl Future<Output = Result<I, Error>> + Send { async move {
-        let file = std::fs::File::open(file_path)?;
-        let reader = std::io::BufReader::new(file);
-        let data = serde_json::from_reader(reader)?;
-        Ok(data)
-    }}
+    }
 
-    /// GET request a URL (with a client), deserializing the JSON response to some I type
-    fn extract_url(url: &str) -> impl Future<Output = Result<I, Error>> + Send { async move {
-        let client = reqwest::Client::new();
-        let response = client.get(url)
-            .header("User-Agent", "Mozilla/5.0")
-            .send().await?
-            .text().await?;
-        let data: I = serde_json::from_str(&response).expect("couldn't deserialize Price");
-        Ok(data)
-    }}
+    /// Reads a JSON file and deserializes to some `I` type.
+    fn extract_file(&self, file_path: &str) -> impl Future<Output = Result<I, Error>> {
+        async move {
+            let file = std::fs::File::open(file_path)?;
+            let reader = std::io::BufReader::new(file);
+            let data = serde_json::from_reader(reader)?;
+            Ok(data)
+        }
+    }
 
-    /// ## Transform
-    /// Transform to desired output (to be written by the user).
-    fn transform(input: I) -> impl Future<Output = Result<O, Error>> + Send;
-
-    /// ## Load
-    /// Load to a database. 
-    /// Default implememtation has a list current database APIs:
-    /// - CouchDB
-    /// - ScyllaDB
-    /// - PostgreSQL
+    /// GET request a URL (with a client), deserializing the JSON response to some `I` type.
     /// 
-    /// The assumption is to take a file/table name and create/update it
-    fn load(output: O, db: &str) -> impl Future<Output = ()> + Send { async move {
-
-        let binding = db.to_lowercase();
-        let database = binding.as_str();
-        match database {
-
-            // ---> CouchDB
-            "couchdb" | "couch" => {}            
-
-            // ---> ScyllaDB
-            "scylladb" | "scylla" => {}
-
-            // ---> PostgreSQL
-            "postgresql" | "postgres" | "pgsql" => {}
-
-            // else
-            _ => panic!("[error] this database type is either: incorrectly typed, or unsupported")
+    /// Provides 1 (very cheeky & anonymous) HTTP header: 
+    /// 
+    /// `{ "User-Agent":"example@example.com" }`
+    fn extract_url(&self, url: &str) -> impl Future<Output = Result<I, Error>> {
+        async move {
+            let client = reqwest::Client::new();
+            let response = client
+                .get(url)
+                .header("User-Agent", "example@example.com")
+                .send()
+                .await?
+                .text()
+                .await?;
+            let data: I = serde_json::from_str(&response).expect("couldn't deserialize Price");
+            Ok(data)
         }
-    }}
+    }
 
-    /// # Aggregated Methods
+    /// Transform to desired output (to be written by the user).
+    fn transform(&self, input: I) -> impl Future<Output = Result<O, Error>>;
+
+    /// Load to a database.
+    /// The default implementation has a list of current database APIs:
+    /// - CouchDB
+    // - ScyllaDB
+    // - PostgreSQL
+    ///
+    /// The assumed workflow is: take a file/table and create/update it
+    fn load(&self, output: O, conn: &str, doc_id: &str) -> impl Future<Output = Result<(), Error>> {
+        async move {
+            let _ = self.load_couchdb(output, conn, doc_id).await;
+            Ok(())
+        }
+    }
+
+    /// Loads document to CouchDB.
+    fn load_couchdb(&self, output: O, conn: &str, doc_id: &str) -> impl Future<Output = Result<(), Error>> { 
+        async move {
+            couchdb::insert_doc::<O>(&output, conn, doc_id).await;
+            Ok(())
+        }
+    }
+
+    /// ## Aggregations
+
     /// extract() -> transform()
-    fn extran(path: &str) -> impl Future<Output = Result<O, Error>> + Send { async {
-        let input = Self::extract(path).await.expect("could not extract {self}");
-        let output = Self::transform(input).await.expect("could not transform {self}");
-        Ok(output)
-    }}
+    fn extran(&self, path: &str) -> impl Future<Output = Result<O, Error>> {
+        async {
+            let input = self.extract(path).await.expect("could not extract {self}");
+            let output = self.transform(input)
+                .await
+                .expect("could not transform {self}");
+            Ok(output)
+        }
+    }
 
     /// extract() -> transform() -> load()
-    fn etl(path: &str, db: Database) -> impl Future<Output = ()> + Send { async {
-        let input = Self::extract(path).await.expect("could not extract {self}");
-        let output = Self::transform(input).await.expect("could not transform {self}");
-        Self::load(output, db).await//.expect("could not load {self} to database")
-    }}
+    fn etl(&self, path: &str, conn: &str, doc_id: &str) -> impl Future<Output = Result<(), Error>> {
+        async {
+            let input = self.extract(path).await.expect("could not extract {self}");
+            let output = self.transform(input)
+                .await
+                .expect("could not transform {self}");
+            self.load(output, conn, doc_id).await //.expect("could not load {self} to database")
+        }
+    }
 }
 
-/// enum used in specifying which Database API to use.
-/// Allows for a generalised `load()` method to be maintained.
-pub enum Database<'a> {
-    CouchDB(&'a str, &'a str),
-    ScyllaDB(&'a str, &'a str),
-    PostgreSQL(&'a str, &'a str)
-}
-
-/// Connection query
-pub struct Connection {
-
-}
-
-/// Custom Error type for ETL, wrapping all Error types.
+/// Custom Error wrapper for ETL.
+/// 
 /// If a user adds further dependencies, they should redefine further objects within Error enum.
-/// If not, an undefined error will return an 'anyhow::Error' wrapping (defined as Other).
+/// 
+/// If not: any undefined error will return an `anyhow::Error`, defined as `Other(Error)`.
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
+    /// reqwest
     #[error("[error] could not fetch URL: {0}")]
     HTTP(#[from] reqwest::Error),
 
+    /// std::fs
     #[error("[error] could not open file: {0}")]
     IO(#[from] std::io::Error),
 
+    /// serde_json
     #[error("[error] could not convert source to JSON: {0}")]
     JSON(#[from] serde_json::Error),
 
+    /// undefined errors are umbrella'd under here
     #[error("[error] {0}")]
-    Other(#[from] anyhow::Error)
+    Other(#[from] anyhow::Error),
 }
