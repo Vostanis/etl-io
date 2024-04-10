@@ -4,12 +4,16 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap as Map;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-extern crate etl_io as etl;
-use etl::{Database::CouchDB, ETL};
+use pipe_io::Pipe;
 
 #[derive(Deserialize, Debug)]
 struct RawPrice {
     chart: Chart,
+}
+
+#[derive(Deserialize)]
+struct VecPrice {
+    vec_price: Vec<Price>
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -23,7 +27,8 @@ struct Price {
     volume: u64,
 }
 
-impl ETL<RawPrice, Vec<Price>> for Price {
+impl<RawPrice, Vec<Price>> Pipe<RawPrice, Vec<Price>> {
+
     async fn extract(init: &str) -> Result<RawPrice, etl::Error> {
         let data = serde_json::from_str(&init)?;
         Ok(data)
@@ -57,11 +62,47 @@ impl ETL<RawPrice, Vec<Price>> for Price {
             .collect::<Vec<_>>();
         Ok(price_set)
     }
-
-    async fn load(_data: Vec<Price>, _: &str) -> () {
-        println!("document inserted")
-    }
 }
+
+// impl ETL<RawPrice, Vec<Price>> for Price {
+//     async fn extract(init: &str) -> Result<RawPrice, etl::Error> {
+//         let data = serde_json::from_str(&init)?;
+//         Ok(data)
+//     }
+
+//     async fn transform(data: RawPrice) -> Result<Vec<Price>, etl::Error> {
+//         let base = &data.chart.result[0];
+//         let price = &base.indicators.quote[0];
+//         let adjclose = &base.indicators.adjclose[0].adjclose;
+//         let dates = &base.date;
+//         let price_set = price
+//             .open
+//             .iter()
+//             .zip(price.high.iter())
+//             .zip(price.low.iter())
+//             .zip(price.close.iter())     
+//             .zip(price.volume.iter())
+//             .zip(adjclose.iter())
+//             .zip(dates.iter())
+//             .map(
+//                 |((((((open, high), low), close), volume), adj_close), date)| Price {
+//                     date: date.clone(),
+//                     open: *open,
+//                     high: *high,
+//                     low: *low,
+//                     close: *close,
+//                     adj_close: *adj_close,
+//                     volume: *volume,
+//                 },
+//             )
+//             .collect::<Vec<_>>();
+//         Ok(price_set)
+//     }
+
+//     async fn load(_data: Vec<Price>, _: &str) -> () {
+//         println!("document inserted")
+//     }
+// }
 
 #[derive(Deserialize, Debug)]
 struct Chart {

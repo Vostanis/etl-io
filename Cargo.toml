@@ -1,9 +1,16 @@
 [package]
-name = "etl-io"
+name = "pipe-io"
 version = "0.1.0"
 edition = "2021"
+authors = ["Vostanis <vostanis@proton.me>"]
+description = "An ETL framework."
+keywords = ["ETL", "pipe", "pipeline", "data", "engineer", "engineering", "database", "io"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+name = "pipe_io"
+path = "src/lib.rs"
 
 [dependencies]
 anyhow = "1.0.81"
