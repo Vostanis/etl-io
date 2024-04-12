@@ -6,18 +6,18 @@
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
     /// reqwest
-    #[error("[error] could not fetch URL: {0}")]
+    #[error("could not fetch URL: {0}")]
     HTTP(#[from] reqwest::Error),
 
     /// std::fs
-    #[error("[error] could not open file: {0}")]
+    #[error("could not open file: {0}")]
     IO(#[from] std::io::Error),
 
     /// serde_json
-    #[error("[error] could not convert source to JSON: {0}")]
+    #[error("could not convert source to JSON: {0}")]
     JSON(#[from] serde_json::Error),
 
     /// undefined errors are umbrella'd under here
-    #[error("[error] {0}")]
+    #[error("{0}")]
     Other(#[from] anyhow::Error),
 }

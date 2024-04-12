@@ -4,16 +4,11 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap as Map;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use pipe_io::Pipe;
+use pipe_io::{Pipe, ETL, etl};
 
 #[derive(Deserialize, Debug)]
 struct RawPrice {
     chart: Chart,
-}
-
-#[derive(Deserialize)]
-struct VecPrice {
-    vec_price: Vec<Price>
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -27,82 +22,44 @@ struct Price {
     volume: u64,
 }
 
-impl<RawPrice, Vec<Price>> Pipe<RawPrice, Vec<Price>> {
+etl! {
+    @ RawPrice -> Vec<Price>
+    {
+        async fn extract(&self, init: &str) -> Result<RawPrice, pipe_io::Error> {
+            let data = serde_json::from_str(&init)?;
+            Ok(data)
+        }
 
-    async fn extract(init: &str) -> Result<RawPrice, etl::Error> {
-        let data = serde_json::from_str(&init)?;
-        Ok(data)
-    }
-
-    async fn transform(data: RawPrice) -> Result<Vec<Price>, etl::Error> {
-        let base = &data.chart.result[0];
-        let price = &base.indicators.quote[0];
-        let adjclose = &base.indicators.adjclose[0].adjclose;
-        let dates = &base.date;
-        let price_set = price
-            .open
-            .iter()
-            .zip(price.high.iter())
-            .zip(price.low.iter())
-            .zip(price.close.iter())
-            .zip(price.volume.iter())
-            .zip(adjclose.iter())
-            .zip(dates.iter())
-            .map(
-                |((((((open, high), low), close), volume), adj_close), date)| Price {
-                    date: date.clone(),
-                    open: *open,
-                    high: *high,
-                    low: *low,
-                    close: *close,
-                    adj_close: *adj_close,
-                    volume: *volume,
-                },
-            )
-            .collect::<Vec<_>>();
-        Ok(price_set)
+        async fn transform(&self, data: RawPrice) -> Result<Vec>, pipe_io::Error> {
+            let base = &data.chart.result[0];
+            let price = &base.indicators.quote[0];
+            let adjclose = &base.indicators.adjclose[0].adjclose;
+            let dates = &base.date;
+            let price_set = price
+                .open
+                .iter()
+                .zip(price.high.iter())
+                .zip(price.low.iter())
+                .zip(price.close.iter())
+                .zip(price.volume.iter())
+                .zip(adjclose.iter())
+                .zip(dates.iter())
+                .map(
+                    |((((((open, high), low), close), volume), adj_close), date)| Price {
+                        date: date.clone(),
+                        open: *open,
+                        high: *high,
+                        low: *low,
+                        close: *close,
+                        adj_close: *adj_close,
+                        volume: *volume,
+                    },
+                )
+                .collect::<Vec<_>>();       
+            Ok(price_set)
+        }
     }
 }
-
-// impl ETL<RawPrice, Vec<Price>> for Price {
-//     async fn extract(init: &str) -> Result<RawPrice, etl::Error> {
-//         let data = serde_json::from_str(&init)?;
-//         Ok(data)
-//     }
-
-//     async fn transform(data: RawPrice) -> Result<Vec<Price>, etl::Error> {
-//         let base = &data.chart.result[0];
-//         let price = &base.indicators.quote[0];
-//         let adjclose = &base.indicators.adjclose[0].adjclose;
-//         let dates = &base.date;
-//         let price_set = price
-//             .open
-//             .iter()
-//             .zip(price.high.iter())
-//             .zip(price.low.iter())
-//             .zip(price.close.iter())     
-//             .zip(price.volume.iter())
-//             .zip(adjclose.iter())
-//             .zip(dates.iter())
-//             .map(
-//                 |((((((open, high), low), close), volume), adj_close), date)| Price {
-//                     date: date.clone(),
-//                     open: *open,
-//                     high: *high,
-//                     low: *low,
-//                     close: *close,
-//                     adj_close: *adj_close,
-//                     volume: *volume,
-//                 },
-//             )
-//             .collect::<Vec<_>>();
-//         Ok(price_set)
-//     }
-
-//     async fn load(_data: Vec<Price>, _: &str) -> () {
-//         println!("document inserted")
-//     }
-// }
 
 #[derive(Deserialize, Debug)]
 struct Chart {
@@ -185,7 +142,7 @@ struct AdjClose {
 struct Output {
     // currency: String,
     // exchange: String,
-    price: Vec<Price>,
+    price: VecPrice,
     #[serde(flatten)]
     fundamentals: Map<String, Vec<Fundamentals>>,
 }
@@ -253,7 +210,10 @@ async fn main() {
         }
     }"#;
 
-    let price = Price::extran(json_data).await.unwrap();
+    let price = Pipe::<RawPrice, VecPrice>::new()
+        .extran(json_data)
+        .await
+        .unwrap();
 
     // FUNDAMENTALS DATASET
     // create string variables
