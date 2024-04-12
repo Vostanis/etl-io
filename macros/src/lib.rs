@@ -1,7 +1,7 @@
 use proc_macro::TokenStream;
 use quote::quote;
 use syn::parse::{Parse, ParseStream, Result};
-use syn::{braced, bracketed, parse_macro_input, Attribute, Block, Ident, Stmt, Token, Type, TypePath};
+use syn::{braced, parse_macro_input, AngleBracketedGenericArguments, Attribute, Block, Ident, Stmt, Token, Type, TypePath};
 
 #[proc_macro]
 pub fn etl(input: TokenStream) -> TokenStream {
@@ -22,9 +22,20 @@ pub fn etl(input: TokenStream) -> TokenStream {
     .into()
 }
 
+enum ArgInput {
+    WrappedType(TypePath),
+    Type(Type),
+}
+
+impl Parse for ArgInput {
+    fn parse(input: ParseStream) -> Result<Self> {
+        
+    }
+}
+
 struct Arg {
-    type_one: Ident,
-    type_two: Ident,
+    type_one: ArgInput,
+    type_two: ArgInput,
     stmts: Vec<Stmt>,
 }
 
@@ -33,17 +44,16 @@ impl Parse for Arg {
 
         // @ Input -> Output
         input.parse::<Token![@]>()?;
-        let type_one: Ident = input.parse()?;
+        let type_one: Type = input.parse()?;
         input.parse::<Token![->]>()?;
-        let type_two: Ident = input.parse()?;
-
-        // @[Input -> Output]
-        // let bracket_content;
-        // let _bracket_token = bracketed!(bracket_content in input);
-        // let type_one: Type = bracket_content.parse()?;
-        // bracket_content.parse::<Token![-]>()?;
-        // bracket_content.parse::<Token![>]>()?;
-        // let type_two: Type = bracket_content.parse()?;
+        // let type_two: Type =  input.parse()?;
+        let type_two = if input.peek(syn::token::Type) & input.peek2(Token![<]) {
+            input.parse::<TypePath>()?
+        } else {
+            input.parse::<Type>()?
+        }
+        
+        // need to peek ahead for `<`
 
         // { async fn func() { ... } ... }
         let brace_content;

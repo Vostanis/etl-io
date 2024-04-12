@@ -30,7 +30,7 @@ etl! {
             Ok(data)
         }
 
-        async fn transform(&self, data: RawPrice) -> Result<Vec>, pipe_io::Error> {
+        async fn transform(&self, data: RawPrice) -> Result<Vec<Price>, pipe_io::Error> {
             let base = &data.chart.result[0];
             let price = &base.indicators.quote[0];
             let adjclose = &base.indicators.adjclose[0].adjclose;
@@ -142,7 +142,7 @@ struct AdjClose {
 struct Output {
     // currency: String,
     // exchange: String,
-    price: VecPrice,
+    price: Vec<Price>,
     #[serde(flatten)]
     fundamentals: Map<String, Vec<Fundamentals>>,
 }
@@ -210,7 +210,7 @@ async fn main() {
         }
     }"#;
 
-    let price = Pipe::<RawPrice, VecPrice>::new()
+    let price = Pipe::<RawPrice, Vec<Price>>::new()
         .extran(json_data)
         .await
         .unwrap();
