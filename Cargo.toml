@@ -1,3 +1,4 @@
+workspace = { members = ["macros"] }
 [package]
 name = "pipe-io"
 version = "0.1.0"
@@ -13,6 +14,7 @@ name = "pipe_io"
 path = "src/lib.rs"
 
 [dependencies]
+macros = { path = "./macros" }
 anyhow = "1.0.81"
 reqwest = { version = "0.12.2", features = ["json"] }
 serde = { version = "1.0.197", features = ["derive"] }

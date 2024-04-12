@@ -4,16 +4,11 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap as Map;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use pipe_io::Pipe;
+use pipe_io::{Pipe, pipe::ETL};
 
 #[derive(Deserialize, Debug)]
 struct RawPrice {
     chart: Chart,
-}
-
-#[derive(Deserialize)]
-struct VecPrice {
-    vec_price: Vec<Price>
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -27,14 +22,14 @@ struct Price {
     volume: u64,
 }
 
-impl<RawPrice, Vec<Price>> Pipe<RawPrice, Vec<Price>> {
+impl<RawPrice, Vec<Price>> ETL<RawPrice, Vec<Price>> for Pipe<RawPrice, Vec<Price>> {
 
-    async fn extract(init: &str) -> Result<RawPrice, etl::Error> {
+    async fn extract(init: &str) -> Result<RawPrice, pipe_io::Error> {
         let data = serde_json::from_str(&init)?;
         Ok(data)
     }
 
-    async fn transform(data: RawPrice) -> Result<Vec<Price>, etl::Error> {
+    async fn transform(data: RawPrice) -> Result<Vec<Price>, pipe_io::Error> {
         let base = &data.chart.result[0];
         let price = &base.indicators.quote[0];
         let adjclose = &base.indicators.adjclose[0].adjclose;
@@ -65,7 +60,7 @@ impl<RawPrice, Vec<Price>> Pipe<RawPrice, Vec<Price>> {
 }
 
 // impl ETL<RawPrice, Vec<Price>> for Price {
-//     async fn extract(init: &str) -> Result<RawPrice, etl::Error> {
+//     async fn extract(init: &str) -> Result<RawPrice, pipe_io::Error> {
 //         let data = serde_json::from_str(&init)?;
 //         Ok(data)
 //     }

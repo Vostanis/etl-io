@@ -111,14 +111,24 @@
 //! }
 //! ```
 
-#![allow(dead_code)]
-
 // Modules
 pub mod db;
 pub mod default;
 pub mod error;
+pub mod etl;
 pub mod pipe;
 
 // Re-exports
 pub use error::Error;
+pub use etl::ETL;
+pub use macros::etl;
 pub use pipe::Pipe;
+
+// Crate-wide traits
+pub trait Input: serde::de::DeserializeOwned + Send {}
+pub trait Output: serde::de::DeserializeOwned + serde::Serialize + Send {}
+
+// Prelude: Commonly Packaged
+pub mod prelude {
+    pub use super::{Error, Input, Output, Pipe, ETL};
+}
