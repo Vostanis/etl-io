@@ -121,7 +121,7 @@ pub mod pipe;
 // Re-exports
 pub use error::Error;
 pub use etl::ETL;
-pub use macros::etl;
+pub use macros::pipeline;
 pub use pipe::Pipe;
 
 // Crate-wide traits

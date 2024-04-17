@@ -1,4 +1,4 @@
-use pipe_io::etl;
+use macros::pipeline;
 use pipe_io::prelude::*;
 use serde::{Deserialize, Serialize};
 
@@ -44,8 +44,8 @@ pub struct Reformatted {
     thoughts: Vec<String>,
 }
 
-etl! {
-    @ Original -> Reformatted
+pipeline! {
+    @ Original -> Vec<Reformatted>
     {
         async fn extract(&self, data: &str) -> Result<Original, Error> {
             let json: Original = serde_json::from_str(data)?;
@@ -53,7 +53,7 @@ etl! {
             Ok(json)
         }
 
-        async fn transform(&self, input: Original) -> Result<Reformatted, Error> {
+        async fn transform(&self, input: Original) -> Result<Vec<Reformatted>, Error> {
             let thoughts = input.thoughts_and_times
                 .into_iter()
                 .map(|row| row.thought)

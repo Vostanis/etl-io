@@ -3,8 +3,8 @@ use chrono::DateTime;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap as Map;
 use std::time::{SystemTime, UNIX_EPOCH};
-
-use pipe_io::{Pipe, ETL, etl};
+use std::vec::Vec;
+use pipe_io::{Pipe, pipeline};
 
 #[derive(Deserialize, Debug)]
 struct RawPrice {
@@ -22,7 +22,7 @@ struct Price {
     volume: u64,
 }
 
-etl! {
+pipeline! {
     @ RawPrice -> Vec<Price>
     {
         async fn extract(&self, init: &str) -> Result<RawPrice, pipe_io::Error> {
