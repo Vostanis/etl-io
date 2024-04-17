@@ -45,7 +45,7 @@ pub struct Reformatted {
 }
 
 etl! {
-    #[Original -> Reformatted]
+    @ Original -> Reformatted
     {
         async fn extract(&self, data: &str) -> Result<Original, Error> {
             let json: Original = serde_json::from_str(data)?;

@@ -1,7 +1,7 @@
 use proc_macro::TokenStream;
 use quote::quote;
 use syn::parse::{Parse, ParseStream, Result};
-use syn::{braced, bracketed, parse_macro_input, Attribute, Block, Ident, Stmt, Token, Type, TypePath};
+use syn::{braced, parse_macro_input, punctuated::Punctuated, Attribute, Block, Stmt, Token, TypePath};
 
 #[proc_macro]
 pub fn etl(input: TokenStream) -> TokenStream {
@@ -23,27 +23,18 @@ pub fn etl(input: TokenStream) -> TokenStream {
 }
 
 struct Arg {
-    type_one: Ident,
-    type_two: Ident,
+    type_one: TypePath,
+    type_two: TypePath,
     stmts: Vec<Stmt>,
 }
 
 impl Parse for Arg {
     fn parse(input: ParseStream) -> Result<Self> {
-
         // @ Input -> Output
-        input.parse::<Token![@]>()?;
-        let type_one: Ident = input.parse()?;
+        // input.parse::<Token![@]>()?;
+        let type_one: TypePath = input.parse()?;
         input.parse::<Token![->]>()?;
-        let type_two: Ident = input.parse()?;
-
-        // @[Input -> Output]
-        // let bracket_content;
-        // let _bracket_token = bracketed!(bracket_content in input);
-        // let type_one: Type = bracket_content.parse()?;
-        // bracket_content.parse::<Token![-]>()?;
-        // bracket_content.parse::<Token![>]>()?;
-        // let type_two: Type = bracket_content.parse()?;
+        let type_two: TypePath = input.parse()?;
 
         // { async fn func() { ... } ... }
         let brace_content;
@@ -59,3 +50,54 @@ impl Parse for Arg {
         })
     }
 }
+
+struct Args {
+    args: Vec<Arg>,
+}
+
+impl Parse for Args {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let args =  Punctuated::<Arg, Token![@]>::parse_terminated(input)?;
+        Ok(Args {
+            args: args.into_iter().collect()
+        })
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Test
+
+#[proc_macro]
+pub fn pipeline(input: TokenStream) -> TokenStream {
+
+    let arg = parse_macro_input!(input as Arg);
+    let type1 = &arg.type_one;
+    let type2 = &arg.type_two;
+    let stmts = &arg.stmts;
+
+    quote! {
+        impl Trait<#type1, #type2> for Wrapper<#type1, #type2>
+        {
+            #(#stmts)*
+        }
+    }
+    .into()
+}
+
+// enum ArgInput {
+//     TypePath(TypePath),
+//     Type(Type),
+// }
+
+// impl Parse for ArgInput {
+//     fn parse(input: ParseStream) -> Result<Self> {
+//         let lookahead = input.lookahead1();
+//         if lookahead.peek(Token![::]) || lookahead.peek(Token![<]) {
+//             input.parse().map(ArgInput::TypePath)
+//         } else if lookahead.peek() {
+//             input.parse().map(ArgInput::Type)
+//         } else {
+//             Err(lookahead.error())
+//         }
+//     }
+// }
