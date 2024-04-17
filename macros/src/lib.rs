@@ -1,7 +1,7 @@
 use proc_macro::TokenStream;
 use quote::quote;
 use syn::parse::{Parse, ParseStream, Result};
-use syn::{braced, parse_macro_input, punctuated::Punctuated, Attribute, Block, Stmt, Token, TypePath};
+use syn::{braced, parse_macro_input, punctuated::Punctuated, Attribute, Block, Stmt, Token, Type};
 
 #[proc_macro]
 pub fn etl(input: TokenStream) -> TokenStream {
@@ -23,18 +23,18 @@ pub fn etl(input: TokenStream) -> TokenStream {
 }
 
 struct Arg {
-    type_one: TypePath,
-    type_two: TypePath,
+    type_one: Type,
+    type_two: Type,
     stmts: Vec<Stmt>,
 }
 
 impl Parse for Arg {
     fn parse(input: ParseStream) -> Result<Self> {
         // @ Input -> Output
-        // input.parse::<Token![@]>()?;
-        let type_one: TypePath = input.parse()?;
+        input.parse::<Token![@]>()?;
+        let type_one = input.parse()?;
         input.parse::<Token![->]>()?;
-        let type_two: TypePath = input.parse()?;
+        let type_two = input.parse()?;
 
         // { async fn func() { ... } ... }
         let brace_content;
@@ -57,10 +57,12 @@ struct Args {
 
 impl Parse for Args {
     fn parse(input: ParseStream) -> Result<Self> {
-        let args =  Punctuated::<Arg, Token![@]>::parse_terminated(input)?;
-        Ok(Args {
-            args: args.into_iter().collect()
-        })
+        let mut args = vec![];
+
+        while !input.is_empty() {
+            args.push(input.parse()?);
+        }
+        Ok(Args { args })
     }
 }
 
@@ -70,18 +72,37 @@ impl Parse for Args {
 #[proc_macro]
 pub fn pipeline(input: TokenStream) -> TokenStream {
 
-    let arg = parse_macro_input!(input as Arg);
-    let type1 = &arg.type_one;
-    let type2 = &arg.type_two;
-    let stmts = &arg.stmts;
+    let args = parse_macro_input!(input as Args);
+    let mut quotes = vec![];
+    for arg in args.args {
+        let type1 = &arg.type_one;
+        let type2 = &arg.type_two;
+        let stmts = &arg.stmts;
+        quotes.push(quote! {
+            impl Trait<#type1, #type2> for Wrapper<#type1, #type2>
+            {
+                #(#stmts)*
+            }
+        })
+    }
 
     quote! {
-        impl Trait<#type1, #type2> for Wrapper<#type1, #type2>
-        {
-            #(#stmts)*
-        }
+        #(#quotes)*
     }
     .into()
+
+    // let arg = parse_macro_input!(input as Arg);
+    // let type1 = &arg.type_one;
+    // let type2 = &arg.type_two;
+    // let stmts = &arg.stmts;
+
+    // quote! {
+    //     impl Trait<#type1, #type2> for Wrapper<#type1, #type2>
+    //     {
+    //         #(#stmts)*
+    //     }
+    // }
+    // .into()
 }
 
 // enum ArgInput {
