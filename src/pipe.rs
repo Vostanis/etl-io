@@ -11,6 +11,7 @@ use std::marker::PhantomData;
 ///     .await?
 ///     .load(...)
 ///     .await?;
+/// ```
 pub struct Pipe<I, O> {
     // There's no actual data to hold, so we use PhantomData to remember the 2 types of the process.
     // This way the compiler stays happy, and we have a concise way to declare a new ETL process, i.e.;
