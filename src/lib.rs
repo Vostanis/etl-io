@@ -35,7 +35,7 @@
 //!
 //!     // using extract() default impl
 //!
-//!     pub fn transform(data: Input) -> Result<Output, etl::Error> {
+//!     pub fn transform(data: Input) -> pipe_io::Result<Output> {
 //!         ...
 //!     }
 //!
@@ -71,6 +71,7 @@
 //!     volume: u64,
 //! }
 //! 
+//! #[derive(Serialize, Deserialize, Debug)]
 //! struct Price(Vec<PriceRow>);
 //!
 //! pipeline! {
@@ -78,13 +79,13 @@
 //!     @ RawPrice -> Price
 //!     {
 //!         // reading JSON from static str
-//!         async fn extract(init: &str) -> Result<RawPrice, etl::Error> {
+//!         async fn extract(init: &str) -> pipe_io::Result<RawPrice> {
 //!             let data: RawPrice = serde_json::from_str(&init)?;
 //!             Ok(data)
 //!         }
 //! 
 //!         // method that unpacks Input into Output (the following steps are situational)
-//!         async fn transform(data: RawPrice) -> Result<Price, etl::Error> {
+//!         async fn transform(data: RawPrice) -> pipe_io::Result<Price> {
 //!             let base = &data.chart.result[0];
 //!             let price = &base.indicators.quote[0];
 //!             let adjclose = &base.indicators.adjclose[0].adjclose;
