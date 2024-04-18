@@ -61,7 +61,7 @@
 //!
 //! // Output Type; the struct/enum that serializes to the final output
 //! #[derive(Serialize, Deserialize, Debug)]
-//! struct Price {
+//! struct PriceRow {
 //!     date: String,
 //!     open: f64,
 //!     high: f64,
@@ -70,43 +70,45 @@
 //!     adj_close: f64,
 //!     volume: u64,
 //! }
+//! 
+//! struct Price(Vec<PriceRow>);
 //!
-//! // The following is the impl, which could be written one of two ways (in generic terms):
-//! //      impl ETL<I, O> for I { ... }
-//! //      impl ETL<I, O> for O { ... }
-//! impl ETL<RawPrice, Vec<Price>> for RawPrice
-//! {
-//!     // reading JSON from static str
-//!     async fn extract(init: &str) -> Result<RawPrice, etl::Error> {
-//!         let data: RawPrice = serde_json::from_str(&init)?;
-//!         Ok(data)
-//!     }
-//!
-//!     // method that unpacks Input into Output (the following steps are situational)
-//!     async fn transform(data: RawPrice) -> Result<Vec<Price>, etl::Error> {
-//!         let base = &data.chart.result[0];
-//!         let price = &base.indicators.quote[0];
-//!         let adjclose = &base.indicators.adjclose[0].adjclose;
-//!         let dates = &base.date;
-//!         let price_set = price
-//!             .open.iter()
-//!             .zip(price.high.iter())
-//!             .zip(price.low.iter())
-//!             .zip(price.close.iter())
-//!             .zip(price.volume.iter())
-//!             .zip(adjclose.iter())
-//!             .zip(dates.iter())
-//!             .map(|((((((open, high), low), close), volume), adj_close), date)| Price {
-//!                 date: date.clone(),
-//!                 open: *open,
-//!                 high: *high,
-//!                 low: *low,
-//!                 close: *close,
-//!                 adj_close: *adj_close,
-//!                 volume: *volume,
-//!             })
-//!             .collect::<Vec<_>>();
-//!         Ok(price_set)
+//! pipeline! {
+//! 
+//!     @ RawPrice -> Price
+//!     {
+//!         // reading JSON from static str
+//!         async fn extract(init: &str) -> Result<RawPrice, etl::Error> {
+//!             let data: RawPrice = serde_json::from_str(&init)?;
+//!             Ok(data)
+//!         }
+//! 
+//!         // method that unpacks Input into Output (the following steps are situational)
+//!         async fn transform(data: RawPrice) -> Result<Price, etl::Error> {
+//!             let base = &data.chart.result[0];
+//!             let price = &base.indicators.quote[0];
+//!             let adjclose = &base.indicators.adjclose[0].adjclose;
+//!             let dates = &base.date;
+//!             let price_set = price
+//!                 .open.iter()
+//!                 .zip(price.high.iter())
+//!                 .zip(price.low.iter())
+//!                 .zip(price.close.iter())
+//!                 .zip(price.volume.iter())
+//!                 .zip(adjclose.iter())
+//!                 .zip(dates.iter())
+//!                 .map(|((((((open, high), low), close), volume), adj_close), date)| Price {
+//!                     date: date.clone(),
+//!                     open: *open,
+//!                     high: *high,
+//!                     low: *low,
+//!                     close: *close,
+//!                     adj_close: *adj_close,
+//!                     volume: *volume,
+//!                 })
+//!                 .collect::<Vec<_>>();
+//!             Ok(Price(price_set))
+//!         }
 //!     }
 //! }
 //! ```
@@ -128,7 +130,10 @@ pub use pipe::Pipe;
 pub trait Input: serde::de::DeserializeOwned + Send {}
 pub trait Output: serde::de::DeserializeOwned + serde::Serialize + Send {}
 
-// Prelude: Commonly Packaged
-pub mod prelude {
-    pub use super::{Error, Input, Output, Pipe, ETL};
+// Result Wrapper
+pub type Result<T> = std::result::Result<T, error::Error>;
+
+// Commonly Packaged
+pub mod core {
+    pub use super::{pipeline, ETL, Pipe};
 }

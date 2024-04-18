@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap as Map;
 use std::time::{SystemTime, UNIX_EPOCH};
 use std::vec::Vec;
-use pipe_io::{Pipe, ETL, pipeline};
+use pipe_io::core::*;
 
 #[derive(Deserialize, Debug)]
 struct RawPrice {
@@ -26,16 +26,15 @@ struct PriceRow {
 #[derive(Serialize, Deserialize, Debug)]
 struct Price(Vec<PriceRow>);
 
-
 pipeline! {
     @ RawPrice -> Price
     {
-        async fn extract(&self, init: &str) -> Result<RawPrice, pipe_io::Error> {
+        async fn extract(&self, init: &str) -> pipe_io::Result<RawPrice> {
             let data = serde_json::from_str(&init)?;
             Ok(data)
         }
 
-        async fn transform(&self, data: RawPrice) -> Result<Price, pipe_io::Error> {
+        async fn transform(&self, data: RawPrice) -> pipe_io::Result<Price> {
             let base = &data.chart.result[0];
             let price = &base.indicators.quote[0];
             let adjclose = &base.indicators.adjclose[0].adjclose;
@@ -73,7 +72,7 @@ struct Chart {
 
 #[derive(Deserialize, Debug)]
 struct ChartResult {
-    meta: Meta,
+    // meta: Meta,
 
     #[serde(rename = "timestamp", deserialize_with = "de_timestamps")]
     date: Vec<String>,
@@ -115,13 +114,13 @@ where
     }
 }
 
-#[derive(Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
-struct Meta {
-    currency: String,
-    symbol: String,
-    exchange_name: String,
-}
+// #[derive(Deserialize, Debug)]
+// #[serde(rename_all = "camelCase")]
+// struct Meta {
+//     currency: String,
+//     symbol: String,
+//     exchange_name: String,
+// }
 
 #[derive(Deserialize, Debug)]
 struct Indicators {
@@ -363,11 +362,7 @@ async fn main() {
         fundamentals: fdmt.clone(),
     };
 
-    // println!("{:#?}", fdmt["Quarterly Net Income"]);
-    // println!("{:#?}", price.close);
-    // let ds = dataset.fundamentals["Quarterly Net Income"].iter().map(|axe| axe.fmt.clone()).collect::<Vec<_>>();
     println!("{:#?}", &dataset);
-    // println!("{:#?}", ts);
 }
 
 #[derive(Deserialize, Serialize, Debug)]

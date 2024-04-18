@@ -14,29 +14,39 @@ use syn::{braced, parse_macro_input, Attribute, Block, Stmt, Token, Type};
 ///     @ OriginalFormat -> OutputFormat
 ///     {
 ///         // using the default impl of extract()
-///         async fn transform(&self, input: OriginalFormat) -> Result<OutputFormat, pipe_io::Error> { ... }
+/// 
+///         async fn transform(&self, input: OriginalFormat) -> Result<OutputFormat, pipe_io::Error> { 
+///             // ... 
+///         }
+/// 
 ///         // using the default impl of laod()
 ///     }
 /// 
 ///     @ AnotherOriginal -> AnotherOutput
 ///     {
 ///         // using the default impl of extract()
-///         async fn transform(&self, input: AnotherOriginal) -> Result<AnotherOutput, pipe_io::Error> { ... }
-///         async fn load(self, output: AnotherOutput, conn: &str, doc_id: &str) -> Result<(), pipe_io::Error> { ... }
+/// 
+///         async fn transform(&self, input: AnotherOriginal) -> Result<AnotherOutput, pipe_io::Error> { 
+///             // ... 
+///         }
+/// 
+///         async fn load(self, output: AnotherOutput, conn: &str, doc_id: &str) -> Result<(), pipe_io::Error> { .
+///             // ... 
+///         }
 ///     }
 /// 
 ///     @ SomeInput -> AThirdOutput // <------ each Input/Output pair has its own declaration; `@ ... -> ... { ... }`
 ///     {
 ///         async fn extract(&self, path: &str) -> Result<SomeInput, pipe_io::Error> {
-///             ... 
+///             // ... 
 ///         }
 /// 
 ///         async fn transform(&self, input: SomeInput) -> Result<AThirdOutput, pipe_io::Error> {
-///             ...
+///             // ...
 ///         }
 /// 
 ///         async fn load(&self, output: SomeInput, conn: &str, doc_id: &str) -> Result<(), pipe_io::Error> {
-///             ...
+///             // ...
 ///         }
 ///     }
 /// }
