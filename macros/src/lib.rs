@@ -5,16 +5,16 @@ use syn::{braced, parse_macro_input, Attribute, Block, Stmt, Token, Type};
 
 #[proc_macro]
 pub fn pipeline(input: TokenStream) -> TokenStream {
-    let args = parse_macro_input!(input as Args);
-    let mut quotes = vec![];
-    for arg in args.args {
-        let type1 = &arg.type_one; // match Type::Path (MyStruct) or Type::Group (Vec<MyStruct>)
-        let type2 = &arg.type_two; // match Type::Path (MyStruct) or Type::Group (Vec<MyStruct>)
+    let block = parse_macro_input!(input as Args);
+    let mut quotes: Vec<proc_macro2::TokenStream> = vec![];
+    for arg in block.args {
+        let input_type = &arg.type_one; // match Type::Path (MyStruct) or Type::Group (Vec<MyStruct>)
+        let output_type = &arg.type_two; // match Type::Path (MyStruct) or Type::Group (Vec<MyStruct>)
         let stmts = &arg.stmts;
         quotes.push(quote! {
-            impl pipe_io::Input for #type1 {}
-            impl pipe_io::Output for #type2 {}
-            impl pipe_io::ETL<#type1, #type2> for pipe_io::Pipe<#type1, #type2>
+            impl pipe_io::Input for #input_type {}
+            impl pipe_io::Output for #output_type {}
+            impl pipe_io::ETL<#input_type, #output_type> for pipe_io::Pipe<#input_type, #output_type>
             {
                 #(#stmts)*
             }

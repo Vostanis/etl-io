@@ -1,5 +1,5 @@
 use macros::pipeline;
-use pipe_io::prelude::*;
+use pipe_io::prelude::ETL;
 use serde::{Deserialize, Serialize};
 
 static EXAMPLE: &str = r#"
@@ -45,15 +45,15 @@ pub struct Reformatted {
 }
 
 pipeline! {
-    @ Original -> Vec<Reformatted>
+    @ Original -> Reformatted
     {
-        async fn extract(&self, data: &str) -> Result<Original, Error> {
+        async fn extract(&self, data: &str) -> Result<Original, pipe_io::Error> {
             let json: Original = serde_json::from_str(data)?;
             println!("Before:\n=======\n{json:#?}\n");
             Ok(json)
         }
 
-        async fn transform(&self, input: Original) -> Result<Vec<Reformatted>, Error> {
+        async fn transform(&self, input: Original) -> Result<Reformatted, pipe_io::Error> {
             let thoughts = input.thoughts_and_times
                 .into_iter()
                 .map(|row| row.thought)
@@ -68,9 +68,34 @@ pipeline! {
     }
 }
 
+// Above is equivalent to:
+//
+// impl pipe_io::Input for Original {}
+// impl pipe_io::Output for Reformatted {}
+// impl pipe_io::ETL<Original, Reformatted> for pipe_io::Pipe<Original, Reformatted> {
+//     async fn extract(&self, data: &str) -> Result<Original, Error> {
+//         let json: Original = serde_json::from_str(data)?;
+//         println!("Before:\n=======\n{json:#?}\n");
+//         Ok(json)
+//     }
+
+//     async fn transform(&self, input: Original) -> Result<Reformatted, Error> {
+//         let thoughts = input.thoughts_and_times
+//             .into_iter()
+//             .map(|row| row.thought)
+//             .collect();
+
+//         Ok(Reformatted {
+//             first_name: input.first_name,
+//             last_name: input.last_name,
+//             thoughts: thoughts,
+//         })
+//     }
+// }
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let output_data = Pipe::<Original, Reformatted>::new()
+    let output_data = pipe_io::Pipe::<Original, Reformatted>::new()
         .extran(EXAMPLE)
         .await?;
     println!("After:\n======\n{output_data:#?}");
