@@ -23,7 +23,7 @@ struct CouchDocument {
 /// [`CouchDB Documentation`]: (https://docs.couchdb.org/en/stable/intro/index.html)
 pub async fn insert_doc<T>(data: &T, conn: &str, doc_id: &str)
 where
-    for<'de> T: Serialize + Deserialize<'de>,
+    T: serde::Serialize + serde::de::DeserializeOwned,
 {
     // check if the document already exists with a GET request
     let conn = format!("{conn}/{doc_id}");
