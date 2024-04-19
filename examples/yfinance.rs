@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap as Map;
 use std::time::{SystemTime, UNIX_EPOCH};
 use std::vec::Vec;
-use pipe_io::{Pipe, pipeline};
+use pipe_io::core::*;
 
 #[derive(Deserialize, Debug)]
 struct RawPrice {
@@ -12,7 +12,7 @@ struct RawPrice {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-struct Price {
+struct PriceRow {
     date: String,
     open: f64,
     high: f64,
@@ -22,15 +22,18 @@ struct Price {
     volume: u64,
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+struct Price(Vec<PriceRow>);
+
 pipeline! {
-    @ RawPrice -> Vec<Price>
+    @ RawPrice -> Price
     {
         async fn extract(&self, init: &str) -> Result<RawPrice, pipe_io::Error> {
             let data = serde_json::from_str(&init)?;
             Ok(data)
         }
 
-        async fn transform(&self, data: RawPrice) -> Result<Vec<Price>, pipe_io::Error> {
+        async fn transform(&self, data: RawPrice) -> Result<Price, pipe_io::Error> {
             let base = &data.chart.result[0];
             let price = &base.indicators.quote[0];
             let adjclose = &base.indicators.adjclose[0].adjclose;
@@ -45,7 +48,7 @@ pipeline! {
                 .zip(adjclose.iter())
                 .zip(dates.iter())
                 .map(
-                    |((((((open, high), low), close), volume), adj_close), date)| Price {
+                    |((((((open, high), low), close), volume), adj_close), date)| PriceRow {
                         date: date.clone(),
                         open: *open,
                         high: *high,
@@ -56,7 +59,7 @@ pipeline! {
                     },
                 )
                 .collect::<Vec<_>>();       
-            Ok(price_set)
+            Ok(Price(price_set))
         }
     }
 }
@@ -68,7 +71,7 @@ struct Chart {
 
 #[derive(Deserialize, Debug)]
 struct ChartResult {
-    meta: Meta,
+    // meta: Meta,
 
     #[serde(rename = "timestamp", deserialize_with = "de_timestamps")]
     date: Vec<String>,
@@ -110,13 +113,13 @@ where
     }
 }
 
-#[derive(Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
-struct Meta {
-    currency: String,
-    symbol: String,
-    exchange_name: String,
-}
+// #[derive(Deserialize, Debug)]
+// #[serde(rename_all = "camelCase")]
+// struct Meta {
+//     currency: String,
+//     symbol: String,
+//     exchange_name: String,
+// }
 
 #[derive(Deserialize, Debug)]
 struct Indicators {
@@ -142,7 +145,7 @@ struct AdjClose {
 struct Output {
     // currency: String,
     // exchange: String,
-    price: Vec<Price>,
+    price: Price,
     #[serde(flatten)]
     fundamentals: Map<String, Vec<Fundamentals>>,
 }
@@ -210,7 +213,7 @@ async fn main() {
         }
     }"#;
 
-    let price = Pipe::<RawPrice, Vec<Price>>::new()
+    let price = Pipe::<RawPrice, Price>::new()
         .extran(json_data)
         .await
         .unwrap();
@@ -218,8 +221,6 @@ async fn main() {
     // FUNDAMENTALS DATASET
     // create string variables
     let ticker = "NVDA";
-
-    // pub fn fetch_fundamentals(ticker: &str, time_in_unix: String) ->
     let time_in_unix = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .expect("UNIX time for now")
@@ -357,12 +358,8 @@ async fn main() {
         price: price,
         fundamentals: fdmt.clone(),
     };
-
-    // println!("{:#?}", fdmt["Quarterly Net Income"]);
-    // println!("{:#?}", price.close);
-    // let ds = dataset.fundamentals["Quarterly Net Income"].iter().map(|axe| axe.fmt.clone()).collect::<Vec<_>>();
+    
     println!("{:#?}", &dataset);
-    // println!("{:#?}", ts);
 }
 
 #[derive(Deserialize, Serialize, Debug)]

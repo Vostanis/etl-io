@@ -1,5 +1,5 @@
 use macros::pipeline;
-use pipe_io::prelude::*;
+use pipe_io::core::*;
 use serde::{Deserialize, Serialize};
 
 static EXAMPLE: &str = r#"
@@ -45,15 +45,15 @@ pub struct Reformatted {
 }
 
 pipeline! {
-    @ Original -> Vec<Reformatted>
+    @ Original -> Reformatted
     {
-        async fn extract(&self, data: &str) -> Result<Original, Error> {
+        async fn extract(&self, data: &str) -> pipe_io::Result<Original> {
             let json: Original = serde_json::from_str(data)?;
             println!("Before:\n=======\n{json:#?}\n");
             Ok(json)
         }
 
-        async fn transform(&self, input: Original) -> Result<Vec<Reformatted>, Error> {
+        async fn transform(&self, input: Original) -> pipe_io::Result<Reformatted> {
             let thoughts = input.thoughts_and_times
                 .into_iter()
                 .map(|row| row.thought)

@@ -128,7 +128,10 @@ pub use pipe::Pipe;
 pub trait Input: serde::de::DeserializeOwned + Send {}
 pub trait Output: serde::de::DeserializeOwned + serde::Serialize + Send {}
 
+// Result wrapper
+pub type Result<T> = std::result::Result<T, Error>;
+
 // Prelude: Commonly Packaged
-pub mod prelude {
-    pub use super::{Error, Input, Output, Pipe, ETL};
+pub mod core {
+    pub use super::{pipeline, ETL, Pipe};
 }
