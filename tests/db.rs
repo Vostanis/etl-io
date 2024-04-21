@@ -1,6 +1,8 @@
 // each test runs a contained database, then connects and pings it
 // inserting a doc, removing a doc; to be added
 
+// run with `cargo test -- --test-threads=1`
+
 #[tokio::test]
 async fn couchdb() {
     // start couchdb
@@ -46,7 +48,7 @@ async fn postgresql() {
 
     // conn
     let (client, connection) = 
-        tokio_postgres::connect("host=/var/lib/postgresql,localhost user=postgres password=password port=5432", tokio_postgres::NoTls)
+        tokio_postgres::connect("host=localhost user=postgres dbname=postgres password=password port=5432", tokio_postgres::NoTls)
             .await
             .expect("Failed to connect to PostgreSQL service");
     tokio::spawn(async move {
@@ -81,7 +83,7 @@ async fn scylladb() {
     println!("ScyllaDB service started successfully.");
 
     // wait for db to initialise
-    tokio::time::sleep(std::time::Duration::from_secs(10)).await;
+    tokio::time::sleep(std::time::Duration::from_secs(30)).await;
 
     // conn
     let session: scylla::Session = scylla::SessionBuilder::new()
