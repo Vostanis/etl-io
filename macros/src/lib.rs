@@ -1,7 +1,6 @@
 use proc_macro::TokenStream;
 use quote::quote;
 use syn::parse::{Parse, ParseStream, Result};
-use syn::punctuated::Punctuated;
 use syn::{braced, parse_macro_input, Attribute, Block, Stmt, Token, Type};
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -42,7 +41,7 @@ struct Arg {
 impl Parse for Arg {
     fn parse(input: ParseStream) -> Result<Self> {
         // `@ Input -> Output`
-        input.parse::<Token![@]>()?;
+        // input.parse::<Token![@]>()?;
         let type_one = input.parse()?;
         input.parse::<Token![->]>()?;
         let type_two = input.parse()?;
@@ -95,15 +94,9 @@ struct PipeArg {
 
 impl Parse for PipeArg {
     fn parse(input: ParseStream) -> Result<Self> {
-        let types = Punctuated::<_, Token![,]>::parse_terminated(input)?;
-        if types.len() != 2 {
-            return Err(input.error("Expected two types separated by a comma"));
-        }
-
-        let mut types = types.into_iter();
-        let type_one = types.next().unwrap();
-        let type_two = types.next().unwrap();
-
+        let type_one: Type = input.parse()?;
+        input.parse::<Token![->]>()?;
+        let type_two: Type = input.parse()?;
         Ok(PipeArg {
             type_one,
             type_two,

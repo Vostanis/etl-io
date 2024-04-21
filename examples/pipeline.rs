@@ -1,7 +1,7 @@
 use pipe_io::{ETL, pipe, pipeline};
 use serde::{Deserialize, Serialize};
 
-// Imagine we sant to deserialize and reformat the following static JSON:
+// Imagine we want to deserialize & reformat the following JSON:
 static EXAMPLE: &str = r#"
     {
         "prices": [
@@ -32,7 +32,7 @@ struct Prices {
     close: i32,
 }
 
-// We want to transform this output to the following:
+// We want to transform this input to the following output:
 // {
 //     "open": [
 //         2000,
@@ -53,7 +53,7 @@ struct O { // <--- Output Type
 }
 
 pipeline! {
-    @ I -> O 
+    I -> O 
     {
         async fn extract(&self, data: &str) -> pipe_io::Result<I> {
             let json: I = serde_json::from_str(data)?;
@@ -84,7 +84,7 @@ async fn main() {
         .await
         .expect("Failed to extract and transform the data.");
 
-    let output2 = pipe!(I, O)
+    let output2 = pipe![I -> O]
         .extran(EXAMPLE)
         .await
         .expect("Failed to extract and transform the data.");

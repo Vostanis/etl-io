@@ -33,9 +33,8 @@ where
         .send()
         .await
         .expect("failed to retrieve GET response");
-    let status = response.status();
 
-    match status {
+    match response.status() {
         // "if the file already exists ..."
         reqwest::StatusCode::OK => {
             // retrieve current Revision ID
@@ -69,6 +68,6 @@ where
                 .expect("failed to retrieve PUT response");
         }
 
-        _ => println!("the unexpected happened"),
+        _ => eprintln!("unexpected status code found - expected `OK` or `NOT_FOUND`"),
     }
 }
