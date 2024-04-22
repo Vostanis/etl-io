@@ -121,7 +121,7 @@ pub mod pipe;
 // Re-exports
 pub use error::Error;
 pub use etl::ETL;
-pub use macros::pipeline;
+pub use macros::{pipe, pipeline};
 pub use pipe::Pipe;
 
 // Crate-wide traits
@@ -133,5 +133,5 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 // Prelude: Commonly Packaged
 pub mod core {
-    pub use super::{pipeline, ETL, Pipe};
+    pub use super::{pipe, pipeline, ETL, Pipe};
 }

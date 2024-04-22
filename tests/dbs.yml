@@ -1,0 +1,43 @@
+version: '3'
+
+services:
+
+  postgres:
+    image: postgres:13 # Stuck with this version until I find out why Postgres:13 is being demanded (local issue)
+    container_name: postgres-test
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  couchdb:
+    image: couchdb:3.3.3
+    container_name: couch-test
+    environment:
+      COUCHDB_USER: admin
+      COUCHDB_PASSWORD: password
+    ports:
+      - "5984:5984"
+    volumes:
+      - couchdb-data:/opt/couchdb/data
+
+  scylla:
+    image: scylladb/scylla
+    container_name: scylla-test
+    environment:
+      SCYLLA_LISTEN_ADDRESS: 0.0.0.0
+      SCYLLA_BROADCAST_ADDRESS: scylla
+      SCYLLA_SEED_PROVIDER: BaseSeedProvider
+    ports:
+      - "9042:9042"
+    volumes:
+      - scylla-data:/var/lib/scylla
+
+volumes:
+  pgdata:
+  couchdb-data:
+  scylla-data:

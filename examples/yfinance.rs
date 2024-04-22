@@ -26,8 +26,8 @@ struct PriceRow {
 struct Price(Vec<PriceRow>);
 
 pipeline! {
-    @ RawPrice -> Price
-    {
+    
+    RawPrice -> Price {
         async fn extract(&self, init: &str) -> Result<RawPrice, pipe_io::Error> {
             let data = serde_json::from_str(&init)?;
             Ok(data)

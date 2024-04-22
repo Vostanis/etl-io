@@ -45,8 +45,12 @@ pub struct Reformatted {
 }
 
 pipeline! {
-    @ Original -> Reformatted
-    {
+
+    // #[PostgreSQL("admin:password@localhost:8080")]
+    // #[CouchDB("admin:password@localhost:8080")]
+    // #[ScyllaDB("admin:password@localhost:8080")]
+    Original -> Reformatted {
+        
         async fn extract(&self, data: &str) -> pipe_io::Result<Original> {
             let json: Original = serde_json::from_str(data)?;
             println!("Before:\n=======\n{json:#?}\n");

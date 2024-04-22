@@ -1,0 +1,9 @@
+version: '3'  # Specify docker-compose format version
+
+services:
+  scylladb:
+    image: scylladb/scylla  # Use the official ScyllaDB image
+    container_name: my-scylladb  # Name your container
+    ports:
+      - "9042:9042"  # Expose ScyllaDB's CQL port 
+      - "9180:9180"  # Expose ScyllaDB's internal API port (for monitoring, etc.)
