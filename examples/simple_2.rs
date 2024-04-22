@@ -53,8 +53,7 @@ struct O { // <--- Output Type
 }
 
 pipeline! {
-    I -> O 
-    {
+    I -> O {
         async fn extract(&self, data: &str) -> pipe_io::Result<I> {
             let json: I = serde_json::from_str(data)?;
             Ok(json)
@@ -74,7 +73,7 @@ pipeline! {
                 close: closes,
             })
         }
-    }    
+    }
 }
 
 #[tokio::main]

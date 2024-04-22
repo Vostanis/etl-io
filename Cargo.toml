@@ -1,4 +1,4 @@
-workspace = { members = ["macros"] }
+workspace = { members = [ "examples/postgres-dev", "examples/scylla-dev", "macros" ] }
 [package]
 name = "pipe-io"
 version = "0.1.0"
@@ -24,6 +24,7 @@ tokio = { version = "1.37.0", features = ["full", "test-util"] }
 tokio-postgres = "0.7.10"
 scylla = "0.12.0"
 diesel = { version = "2.1.6", features = ["postgres"] }
+dotenv = "0.15.0"
 
 [dev-dependencies]
 chrono = "0.4.37"

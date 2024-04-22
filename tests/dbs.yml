@@ -3,7 +3,7 @@ version: '3'
 services:
 
   postgres:
-    image: postgres:16.2-bookworm
+    image: postgres:13 # Stuck with this version until I find out why Postgres:13 is being demanded (local issue)
     container_name: postgres-test
     environment:
       POSTGRES_DB: postgres
@@ -12,7 +12,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - postgres-data:/var/lib/postgresql/data
+      - pgdata:/var/lib/postgresql/data
 
   couchdb:
     image: couchdb:3.3.3
@@ -38,6 +38,6 @@ services:
       - scylla-data:/var/lib/scylla
 
 volumes:
-  postgres-data:
+  pgdata:
   couchdb-data:
   scylla-data:
