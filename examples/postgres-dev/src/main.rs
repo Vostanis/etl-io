@@ -6,6 +6,11 @@ use diesel::connection::SimpleConnection;
 use model::User;
 use schema::users;
 
+fn establish_connection() -> PgConnection {
+    PgConnection::establish("postgresql://postgres:password@localhost:5432/postgres")
+        .expect("failed to connect to pg db")
+}
+
 fn up(conn: &mut PgConnection) -> QueryResult<()> {
     conn.batch_execute(
         r"CREATE TABLE IF NOT EXISTS users (
@@ -18,11 +23,6 @@ fn up(conn: &mut PgConnection) -> QueryResult<()> {
 
 fn down(conn: &mut PgConnection) -> QueryResult<()> {
     conn.batch_execute("DROP TABLE users")
-}
-
-fn establish_connection() -> PgConnection {
-    PgConnection::establish("postgresql://postgres:password@localhost:5432/postgres")
-        .expect("failed to connect to pg db")
 }
 
 fn delete_user(id: i32) {
@@ -46,4 +46,5 @@ fn main() -> anyhow::Result<()> {
     let _ = down(&mut conn);
 
     Ok(())
-}
+}   
+
