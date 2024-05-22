@@ -1,7 +1,9 @@
-diesel::table! {
-    users (id) {
+use diesel::table;
+
+table! { 
+    users {
         id -> Integer,
         name -> Text,
         email -> Text,
     }
-}
+}   

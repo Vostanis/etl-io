@@ -7,7 +7,7 @@
     - [ ] generalised postgres query macro
     - [ ] postgres & scylladb versions of: `insert_doc()`
     - [ ] auto-serde function
-    - [ ] pipe! macro `pipe!(I, O) == pipe_io::Pipe::<I, O>::new()`
+    - [x] pipe! macro `pipe!(I, O) == pipe_io::Pipe::<I, O>::new()`
 - [ ] cli;
     - [ ] traditional; `pipe -i file.rs:input -o file.rs:output --conn user:password@localhost:8080`
     - [ ] menu; [inquire][1]
