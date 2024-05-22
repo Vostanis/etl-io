@@ -89,4 +89,5 @@ async fn main() {
         .expect("Failed to extract and transform the data.");
 
     assert_eq!(output1, output2);
+    println!("Simple 2 passed!");
 }

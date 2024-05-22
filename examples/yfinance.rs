@@ -28,12 +28,12 @@ struct Price(Vec<PriceRow>);
 pipeline! {
     
     RawPrice -> Price {
-        async fn extract(&self, init: &str) -> Result<RawPrice, pipe_io::Error> {
+        async fn extract(&self, init: &str) -> pipe_io::Result<RawPrice> {
             let data = serde_json::from_str(&init)?;
             Ok(data)
         }
 
-        async fn transform(&self, data: RawPrice) -> Result<Price, pipe_io::Error> {
+        async fn transform(&self, data: RawPrice) -> pipe_io::Result<Price> {
             let base = &data.chart.result[0];
             let price = &base.indicators.quote[0];
             let adjclose = &base.indicators.adjclose[0].adjclose;
